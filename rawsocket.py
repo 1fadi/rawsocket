@@ -33,7 +33,7 @@ class RawSocket:
     def _open_bpf_device(self):
         for i in range(RawSocket.BPF_DEVICES_COUNT):
             try:
-                self.bpf_device = os.open(f"/dev/bpf{i+0}", os.O_RDWR)
+                self.bpf_device = os.open(f"/dev/bpf{i}", os.O_RDWR)
                 break
             except FileNotFoundError:
                 continue
