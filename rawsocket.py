@@ -30,6 +30,27 @@ class RawSocket:
                     pass
         return 1
 
+    def send_arp(
+            self, *, frame: bytes = bytes(), source_mac: bytes = bytes(), source_ip: bytes = bytes(), target_ip: bytes = bytes()
+        ):
+        if not len(frame) and len(source_mac + source_ip + target_ip) != 14:
+            raise TypeError("Either a frame or other parameters must be provided!")
+        if len(frame):
+            return self.send(frame)
+
+        # ARP Header Fields
+        hw_type = b'\x00\x01'  # Ethernet = 1
+        proto_type = b'\x08\x00'  # IPv4
+        hw_length = b'\x06'
+        proto_length = b'\x04'
+        opcode = b'\x00\x01'  # 1 for Request or 2 for Reply
+        arp_frame_header = (
+            hw_type + proto_type + hw_length + proto_length
+            + opcode + source_mac + source_ip + b"\x00" * 6 + target_ip
+        )
+        frame = RawSocket.frame(b"\xff" * 6, source_mac, ethertype=b"\x08\x06", payload=arp_frame_header) # 0x0806 -> ARP
+        return self.send(frame)
+
     def _open_bpf_device(self):
         for i in range(RawSocket.BPF_DEVICES_COUNT):
             try:
