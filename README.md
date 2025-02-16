@@ -27,7 +27,14 @@ frame = RawSocket.frame(
 )
 
 # Send the frame
-sock.send(frame)
+success = sock.send(frame)
+
+# to send an ARP request:
+success = sock.send_arp(
+    source_mac=b"\x76\xc9\x1d\xf1\x27\x04",
+    source_ip=b"\xc0\xa8\xb2\x01", # # 192.168.178.1
+    target_ip=b"\xc0\xa8\xb2\x53" # 192.168.178.53
+)
 ```
 
 ## Methods
@@ -40,12 +47,13 @@ Sends an Ethernet frame via the bound BPF device. Returns `1` on success, `0` on
 ### `frame(dest_mac: bytes, source_mac: bytes, ethertype: bytes = b'\x88\xB5', payload: str | bytes) -> bytes`
 Constructs an Ethernet frame with the specified parameters.
 
-### `bind_bpf()`
-Binds the raw socket to a BPF device and sets it up for packet transmission.
+### `send_arp(...)`
+A public method to send an ARP request.
 
 ## Notes
 - The code assumes that at least one `/dev/bpf*` device is available and **not busy**.
 - Packets may require root privileges to send. (on macOS you must run the script as root)
+- Wireshark usually occupies the first found BPF device `/dev/bpf0` if it's open and listening, so make sure to use `/dev/bpf1` in the script.
 - The system’s network interface must be in promiscuous mode to receive raw packets.
 
 ## License
