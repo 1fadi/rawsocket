@@ -136,7 +136,7 @@ class RawSocket:
             packet = {
                 "destination_mac": ":".join(f"{b:02x}" for b in packet[0:6]),
                 "source_mac": ":".join(f"{b:02x}" for b in packet[6:12]),
-                "ethertype": struct.unpack(">H", packet[12:14])[0],
+                "ethertype": packet[12:14],
                 "payload": packet[14:],
             }
             return packet
