@@ -123,14 +123,16 @@ class RawSocket:
             try:
                 while self.running:
                     packet = os.read(self.socket.bpf_device, self.buffer_size)
-                    self.packets.append(__class__.parse_packet(packet, True))
+                    packet = __class__.parse_packet(packet, self.filter_, True)
+                    if packet is not None:
+                        self.packets.append(packet)
             except OSError as e:
                 print(f"Error reading from {self.device}: {e}")
             finally:
                 os.close(self.socket.bpf_device)
         
         @staticmethod
-        def parse_packet(packet, bpf_header=False):
+        def parse_packet(packet, filter_: dict = dict(), bpf_header=False):
             if bpf_header:
                 packet = packet[18:]
             packet = {
@@ -139,6 +141,15 @@ class RawSocket:
                 "ethertype": packet[12:14],
                 "payload": packet[14:],
             }
+            if filter_ is None:
+                return packet
+            for i in filter_.keys():
+                if i == "payload" and isinstance(filter_[i], list):
+                    for chunk in filter_["payload"]:
+                        if chunk not in packet["payload"]:
+                            return None
+                elif i in packet and filter_[i] != packet[i]:
+                    return None
             return packet
 
         def stop(self):
