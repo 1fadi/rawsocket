@@ -123,11 +123,21 @@ class RawSocket:
             try:
                 while self.running:
                     packet = os.read(self.socket.bpf_device, self.buffer_size)
-                    self.packets.append(packet)
+                    self.packets.append(__class__.parse_packet(packet, True))
             except OSError as e:
                 print(f"Error reading from {self.device}: {e}")
             finally:
                 os.close(self.socket.bpf_device)
+        
+        @staticmethod
+        def parse_packet(packet):
+            packet = {
+                "destination_mac": ":".join(f"{b:02x}" for b in packet[0:6]),
+                "source_mac": ":".join(f"{b:02x}" for b in packet[6:12]),
+                "ethertype": struct.unpack(">H", packet[12:14])[0],
+                "payload": packet[14:],
+            }
+            return packet
 
         def stop(self):
             self.running = False
