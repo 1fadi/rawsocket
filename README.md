@@ -16,7 +16,7 @@ python3 -m pip install rawsock
 
 ### Example Code
 ```python
-from rawsock.rawsocket import RawSocket
+from rawsock import RawSocket
 
 # Create a RawSocket instance for network interface 'en0'
 sock = RawSocket(b"en0")
