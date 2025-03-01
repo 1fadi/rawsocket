@@ -8,12 +8,15 @@ Ensure you are running a Unix-based system (e.g., macOS, freeBSD, openBSD etc) t
 
 ## Installation
 No additional dependencies are required. This module relies on Python's built-in `os`, `struct`, and `fcntl` modules.
+```
+python3 -m pip install rawsock
+```
 
 ## Usage
 
 ### Example Code
 ```python
-from rawsocket import RawSocket
+from rawsock.rawsocket import RawSocket
 
 # Create a RawSocket instance for network interface 'en0'
 sock = RawSocket(b"en0")
