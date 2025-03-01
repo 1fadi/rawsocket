@@ -34,7 +34,8 @@ class RawSocket:
         return 1
 
     def send_arp(
-            self, *, frame: bytes = bytes(), source_mac: bytes = bytes(), source_ip: bytes = bytes(), target_ip: bytes = bytes()
+            self, *, frame: bytes = bytes(), source_mac: bytes | str = bytes(),
+            source_ip: bytes | str = bytes(), target_ip: bytes | str = bytes()
         ):
         if not len(frame) and len(source_mac + source_ip + target_ip) != 14:
             raise TypeError("Either a frame or other parameters must be provided!")
@@ -96,6 +97,26 @@ class RawSocket:
         listener.timeout = timeout
         self._bpf_listener = listener
         return listener
+    
+    @staticmethod
+    def _parse_ip(ip: str) -> bytes:
+        if isinstance(ip, bytes):
+            return ip
+        decimals = ip.strip().split(".")
+        raw_ip = b"".join([int(dec).to_bytes(1, 'big') for dec in decimals])
+        if len(raw_ip) != 4:
+            raise Exception(f"IP address {ip} is not valid.")
+        return raw_ip
+
+    @staticmethod
+    def _parse_mac(mac: str) -> bytes:
+        if isinstance(mac, bytes):
+            return mac
+        hex_values = mac.strip().split(":")
+        raw_mac = b"".join([bytes.fromhex(val) for val in hex_values])
+        if len(raw_mac) != 6:
+            raise Exception(f"MAC address {mac} is not valid.")
+        return raw_mac
 
     class _BPFListener:
         def __init__(self, raw_socket: "RawSocket", buffer_size=4096):
