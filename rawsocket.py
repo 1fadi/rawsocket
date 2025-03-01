@@ -37,6 +37,11 @@ class RawSocket:
             self, *, frame: bytes = bytes(), source_mac: bytes | str = bytes(),
             source_ip: bytes | str = bytes(), target_ip: bytes | str = bytes()
         ):
+        source_mac, source_ip, target_ip = (
+            __class__._parse_mac(source_mac),
+            __class__._parse_ip(source_ip),
+            __class__._parse_ip(target_ip),
+        )
         if not len(frame) and len(source_mac + source_ip + target_ip) != 14:
             raise TypeError("Either a frame or other parameters must be provided!")
         if len(frame):
@@ -67,8 +72,12 @@ class RawSocket:
 
     @staticmethod
     def frame(
-        dest_mac: bytes, source_mac: bytes, *, ethertype: bytes = b'\x88\xB5', payload: str | bytes = bytes()
+        dest_mac: bytes | str, source_mac: bytes | str, *, ethertype: bytes = b'\x88\xB5', payload: str | bytes = bytes()
     ):
+        dest_mac, source_mac = (
+            __class__._parse_mac(dest_mac),
+            __class__._parse_mac(source_mac),
+        )
         if not isinstance(payload, bytes):
             payload = bytes(payload.encode("utf-8"))
         payload_length = len(payload)
