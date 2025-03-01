@@ -1,6 +1,7 @@
 import os
 import struct
 import fcntl
+import threading
 
 class RawSocket:
 
@@ -12,10 +13,12 @@ class RawSocket:
         if not isinstance(ifname, bytes):
             ifname = bytes(ifname.encode())
         self.ifname = ifname
+        self._bpf_listener = None
 
     def send(self, frame: bytes):
         # open a bpf device and bind it to network card
-        self.bind_bpf()
+        if self._bpf_listener and not self._bpf_listener.running:
+            self.bind_bpf()
         # write the frame to the bound BPF device
         try:
             os.write(self.bpf_device, frame)
@@ -23,7 +26,7 @@ class RawSocket:
             print("Packet not sent!\n" + e)
             return 0
         finally:
-            if self.bpf_device is not None:
+            if self.bpf_device is not None and self._bpf_listener is None:
                 try:
                     os.close(self.bpf_device)
                 except OSError:
@@ -86,3 +89,66 @@ class RawSocket:
         # enabling BIOCIMMEDIATE ensures packets are processed and sent immediately
         # to ensure packets don't get stuck in buffer.
         fcntl.ioctl(self.bpf_device, RawSocket.BIOCIMMEDIATE, immediate_mode)
+    
+    def listener(self, timeout: int, *, filter_: str | None = None):
+        listener = self._BPFListener(self, buffer_size=4096)
+        listener.filter_ = filter_
+        listener.timeout = timeout
+        self._bpf_listener = listener
+        return listener
+
+    class _BPFListener:
+        def __init__(self, raw_socket: "RawSocket", buffer_size=4096):
+            if not isinstance(raw_socket, RawSocket):
+                raise ValueError(f"{raw_socket} is not an object of RawSocket.")
+            self.socket = raw_socket
+            self.device = None
+            self.buffer_size = buffer_size
+            self.packets = []
+            self.running = False
+            self.thread = None
+            self.timeout = 5
+            self.filter_ = None
+
+        def __getattribute__(self, name):
+            attr = object.__getattribute__(self, name)
+            if callable(attr) and not self.in_context:
+                raise RuntimeError(f"{self.__class__.__name__} is intended to be run as a context manager.")
+            return attr
+
+        def _capture_packets(self):
+            if not self.running:
+                self.socket.bpf_device = os.open(self.device, os.O_RDONLY)  # read-only
+                self.running = True
+            try:
+                while self.running:
+                    packet = os.read(self.socket.bpf_device, self.buffer_size)
+                    self.packets.append(packet)
+            except OSError as e:
+                print(f"Error reading from {self.device}: {e}")
+            finally:
+                os.close(self.socket.bpf_device)
+
+        def stop(self):
+            self.running = False
+            if self.thread:
+                self.thread.join()
+
+        def __enter__(self):
+            self.socket.bind_bpf()
+            self.in_context, self.running = True, True
+            if self.thread is None or not self.thread.is_alive():
+                self.thread = threading.Thread(target=self._capture_packets, daemon=True)
+                self.thread.start()
+            threading.Timer(self.timeout, self.stop).start()
+            return self.socket
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            event = threading.Event()
+            try:
+                event.wait(self.timeout)
+            except KeyboardInterrupt:
+                self.stop()
+            self.socket.captured_packets = self.packets
+            self.packets = []
+            return False
