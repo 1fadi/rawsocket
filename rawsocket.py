@@ -130,7 +130,9 @@ class RawSocket:
                 os.close(self.socket.bpf_device)
         
         @staticmethod
-        def parse_packet(packet):
+        def parse_packet(packet, bpf_header=False):
+            if bpf_header:
+                packet = packet[18:]
             packet = {
                 "destination_mac": ":".join(f"{b:02x}" for b in packet[0:6]),
                 "source_mac": ":".join(f"{b:02x}" for b in packet[6:12]),
