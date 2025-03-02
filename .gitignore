@@ -1,0 +1,4 @@
+dist/*
+.history/
+.DS_Store
+*.egg-info
