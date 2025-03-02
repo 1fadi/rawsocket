@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+[project]
+name = "rawsock"
+version = "0.0.3"
+authors = [
+  { name="1fadi", email="1fadi@proton.me" },
+]
+description = "a low level python implementation of a raw socket interface for sending Ethernet frames using Berkeley Packet Filters (BPF) on BSD based systems."
+readme = "README.md"
+license = {file = "LICENSE.md"}
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+]
+
+[project.urls]
+Homepage = "https://github.com/1fadi/rawsocket"
+Issues = "https://github.com/1fadi/rawsocket/issues"
