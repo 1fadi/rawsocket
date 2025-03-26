@@ -17,7 +17,7 @@ class RawSocket:
 
     def send(self, frame: bytes):
         # open a bpf device and bind it to network card
-        if self._bpf_listener and not self._bpf_listener.running:
+        if (self._bpf_listener and not self._bpf_listener.running) or self._bpf_listener is None:
             self.bind_bpf()
         # write the frame to the bound BPF device
         try:
@@ -112,8 +112,9 @@ class RawSocket:
         if isinstance(ip, bytes):
             return ip
         decimals = ip.strip().split(".")
-        raw_ip = b"".join([int(dec).to_bytes(1, 'big') for dec in decimals])
-        if len(raw_ip) != 4:
+        try:
+            raw_ip = b"".join([int(dec).to_bytes(1, 'big') for dec in decimals])
+        except OverflowError: # ip exceeds 4 bytes
             raise Exception(f"IP address {ip} is not valid.")
         return raw_ip
 
@@ -122,7 +123,10 @@ class RawSocket:
         if isinstance(mac, bytes):
             return mac
         hex_values = mac.strip().split(":")
-        raw_mac = b"".join([bytes.fromhex(val) for val in hex_values])
+        try:
+            raw_mac = b"".join([bytes.fromhex(val) for val in hex_values])
+        except ValueError:
+            raise Exception(f"MAC address {mac} is not valid.")
         if len(raw_mac) != 6:
             raise Exception(f"MAC address {mac} is not valid.")
         return raw_mac
